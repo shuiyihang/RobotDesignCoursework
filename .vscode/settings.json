@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "sys.h": "c",
+        "hardware.h": "c",
+        "compare": "c",
+        "control.h": "c"
+    }
+}
