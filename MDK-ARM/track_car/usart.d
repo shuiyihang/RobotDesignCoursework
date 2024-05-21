@@ -1,4 +1,4 @@
-track_car/usart.o: usart.c usart.h \
+track_car/usart.o: usart.c ..\MDK-ARM\usart.h \
   D:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
   ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal.h \
   ..\Core\Inc\stm32f1xx_hal_conf.h \

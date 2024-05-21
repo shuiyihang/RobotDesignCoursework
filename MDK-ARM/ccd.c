@@ -26,6 +26,14 @@ static uint8_t _get_adc()
     return adc_value>>4;
 }
 
+void show_ccd_data()
+{
+	for(int i = 0;i < 128;i++)
+	{
+		printf("%d ",ccd_data[i]);
+	}
+	printf("\n");
+}
 /*
  *  CCD:	clk			PA5
 			SI			PA6

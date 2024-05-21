@@ -25,7 +25,7 @@
 "track_car\encoder.o"
 "track_car\control.o"
 "track_car\usart.o"
---strict --scatter "track_car\track_car.sct"
+--library_type=microlib --strict --scatter "track_car\track_car.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
 --list "track_car.map" -o track_car\track_car.axf
