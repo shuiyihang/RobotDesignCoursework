@@ -3,6 +3,11 @@
         "sys.h": "c",
         "hardware.h": "c",
         "compare": "c",
-        "control.h": "c"
+        "control.h": "c",
+        "cstdint": "c",
+        "array": "c",
+        "string": "c",
+        "string_view": "c",
+        "stdlib.h": "c"
     }
 }

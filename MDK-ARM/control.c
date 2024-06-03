@@ -2,16 +2,20 @@
 
 int ec_left,ec_right;
 
-int targ_vel_x = 25;
+int targ_vel_x = 5;
+
+int test_tar_speed = 0;
+
+int g_abs_bias;
 
 PIDController MOTOR_A = {
-	.Kp = 12,
+	.Kp = 15,
 	.Ki = 12,
 	.prevError = 0,
 	.out = 0
 };
 PIDController MOTOR_B = {
-	.Kp = 12,
+	.Kp = 15,
 	.Ki = 12,
 	.prevError = 0,
 	.out = 0
@@ -46,19 +50,36 @@ void limit_pwm_output(PIDController* pid)
 float calc_bias(int cent_pos)
 {
     float ret_val;
-    static float last_bias,bias;
-    bias = cent_pos - 64;
+    static int last_cent_pos = 0,bias;
 
-    ret_val = 0.1 * bias + (bias - last_bias)*1; // pd
-    last_bias = bias;
+    bias = 64 - cent_pos;
+
+    g_abs_bias = abs(bias);
+
+    ret_val = 0.1f * bias + (last_cent_pos - cent_pos)*1.0f; // pd
+    last_cent_pos = cent_pos;
 
     return ret_val;
 }
 
 void Kinematic_analysis(float vel_x,float vel_z,float* left_M,float* right_M)
 {
-    *left_M = vel_x - vel_z * WIDTH_OF_CAR / 2.0f;  // left target speed
-    *right_M = vel_x + vel_z * WIDTH_OF_CAR / 2.0f;
+    float factor = 1.0f;
+    if(g_abs_bias < 10)
+    {
+        // little bias
+        factor = 1.0f;
+    }else if(g_abs_bias < 20)
+    {
+        factor = 1.6f;
+    }else
+    {
+        factor = 2.6f;
+    }
+    // maybe instead of const val,dir rely to vel_z
+    vel_z = vel_z * factor;
+    *left_M = vel_x - vel_z ;//* WIDTH_OF_CAR / 2.0f;  // left target speed
+    *right_M = vel_x + vel_z;//* WIDTH_OF_CAR / 2.0f;
 }
 
 void set_motor_output(PIDController* Motor_A,PIDController* Motor_B)
@@ -70,6 +91,7 @@ void set_motor_output(PIDController* Motor_A,PIDController* Motor_B)
         SET_LOW(AIN2);
     }else
     {
+//			Motor_A->out = 0;
         SET_HIGH(AIN2);
         SET_LOW(AIN1);
     }
@@ -81,6 +103,7 @@ void set_motor_output(PIDController* Motor_A,PIDController* Motor_B)
         SET_LOW(BIN1);
     }else
     {
+//			Motor_B->out = 0;
         SET_HIGH(BIN1);
         SET_LOW(BIN2);
     }
@@ -94,12 +117,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if(htim == &htim3)
     {
+#ifndef TSET_MODE
         // read speed
-        ec_left = read_encoder(2);// may be inverse
+        ec_left = read_encoder(2);
         ec_right = read_encoder(4);
         // read&deal ccd data
         read_ccd_data();
-        int center = find_ccd_center();
+        int center = find_ccd_center_1();
         // calc bias
         float vel_z = calc_bias(center);
         // Kinematic analysis
@@ -107,13 +131,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         Kinematic_analysis(targ_vel_x,vel_z,&l_speed,&r_speed);
         // pid control
         {
+//						Incre_PI_Controller(&MOTOR_A,test_tar_speed,ec_left);
+//						Incre_PI_Controller(&MOTOR_B,test_tar_speed,ec_right);
             Incre_PI_Controller(&MOTOR_A,l_speed,ec_left);
             Incre_PI_Controller(&MOTOR_B,r_speed,ec_right);
 
             limit_pwm_output(&MOTOR_A);
             limit_pwm_output(&MOTOR_B);
-
+						// printf("center:%d,left:%d,right:%d\n",center,MOTOR_A.out,MOTOR_B.out);
             set_motor_output(&MOTOR_A,&MOTOR_B);
+						
         }
+#endif
     }
 }

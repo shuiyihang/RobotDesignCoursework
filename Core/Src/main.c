@@ -91,6 +91,14 @@ CCD:	clk			PA5
 */
 extern int ec_left,ec_right;
 
+extern int test_tar_speed;
+uint8_t uart_buf[10];
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	test_tar_speed = (uart_buf[0] - '0')*10 + (uart_buf[1] - '0');
+	HAL_UART_Receive_IT(&huart1,uart_buf,2);
+}
 /* USER CODE END 0 */
 
 /**
@@ -148,11 +156,16 @@ int main(void)
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);// high work
 	HAL_Delay(500);
 	
+	
+	
+	HAL_UART_Receive_IT(&huart1,uart_buf,2);
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+		
+		//TODO 1.自动阈值方法修改：大津法 2.检测中间黑线的方法修改 3.上位机验证黑线目标
 		
 //		read_ccd_data();
 //		int center = find_ccd_center();
@@ -160,7 +173,9 @@ int main(void)
 //		show_ccd_data();
 //		float voltage = get_battery_vol();
 //		printf("battery vol:%.2f\n",voltage);
-    HAL_Delay(500);
+//		printf("tar_speed: %d, %d, %d\n",test_tar_speed,ec_left,ec_right);
+    commission_with_pc();
+    HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }
@@ -294,7 +309,7 @@ static void MX_ADC2_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_8;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
   if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
   {
     Error_Handler();
