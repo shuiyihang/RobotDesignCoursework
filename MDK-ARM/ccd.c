@@ -30,6 +30,12 @@ static uint8_t _get_adc()
     return adc_value>>4;
 }
 
+
+uint8_t* get_data_handle()
+{
+    return ccd_data;
+}
+
 void show_ccd_data()
 {
 	for(int i = 0;i < 128;i++)
@@ -75,7 +81,7 @@ void read_ccd_data()
     } 
 }
 
-static uint8_t auto_threshold_1(void)
+uint8_t auto_threshold_1(void)
 {
     int val_max,val_min;
     // find min
@@ -95,7 +101,7 @@ static uint8_t auto_threshold_1(void)
 }
 
 // 大津法   otsu
-static uint8_t otsu_threshold()
+uint8_t otsu_threshold()
 {
     #define GrayScale 256
     int Pixel_Max=0;
@@ -201,7 +207,7 @@ int find_ccd_center_1()
  * 另一种寻找中线的方式
 */
 
-static uint8_t auto_threshold_3()
+uint8_t auto_threshold_3()
 {
     uint8_t threshold;
     int sum = 0,diff_avg = 0,ad_avg = 0;

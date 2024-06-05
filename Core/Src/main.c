@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 
 #include "hardware.h"
+#include "control.h"
 #include "stdio.h"
 /* USER CODE END Includes */
 
@@ -175,7 +176,8 @@ int main(void)
 //		printf("battery vol:%.2f\n",voltage);
 //		printf("tar_speed: %d, %d, %d\n",test_tar_speed,ec_left,ec_right);
     commission_with_pc();
-    HAL_Delay(10);
+    car_fuzzy_ctrl();
+    HAL_Delay(1);// 1ms
   }
   /* USER CODE END 3 */
 }

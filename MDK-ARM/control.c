@@ -21,6 +21,8 @@ PIDController MOTOR_B = {
 	.out = 0
 };
 
+static uint8_t sensor_data,last_sensor_data;
+static car_state car_status = RUN;
 
 #define SET_HIGH(pin)  HAL_GPIO_WritePin(GPIOB, pin, GPIO_PIN_SET);
 #define SET_LOW(pin)   HAL_GPIO_WritePin(GPIOB, pin, GPIO_PIN_RESET);
@@ -82,34 +84,32 @@ void Kinematic_analysis(float vel_x,float vel_z,float* left_M,float* right_M)
     *right_M = vel_x + vel_z;//* WIDTH_OF_CAR / 2.0f;
 }
 
-void set_motor_output(PIDController* Motor_A,PIDController* Motor_B)
+void set_motor_output(int a_out,int b_out)
 {
-    if(Motor_A->out > 0)
+    if(a_out > 0)
     {
 			// left front
         SET_HIGH(AIN1);
         SET_LOW(AIN2);
     }else
     {
-//			Motor_A->out = 0;
         SET_HIGH(AIN2);
         SET_LOW(AIN1);
     }
 
-    if(Motor_B->out > 0)
+    if(b_out > 0)
     {
 			// right front
-			 SET_HIGH(BIN2);
+        SET_HIGH(BIN2);
         SET_LOW(BIN1);
     }else
     {
-//			Motor_B->out = 0;
         SET_HIGH(BIN1);
         SET_LOW(BIN2);
     }
 
-    __HAL_TIM_SetCompare(&htim1,TIM_CHANNEL_1, abs(Motor_A->out));
-    __HAL_TIM_SetCompare(&htim1,TIM_CHANNEL_4, abs(Motor_B->out));
+    __HAL_TIM_SetCompare(&htim1,TIM_CHANNEL_1, abs(a_out));
+    __HAL_TIM_SetCompare(&htim1,TIM_CHANNEL_4, abs(b_out));
 }
 
 // 5ms run_loop
@@ -139,9 +139,93 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
             limit_pwm_output(&MOTOR_A);
             limit_pwm_output(&MOTOR_B);
 						// printf("center:%d,left:%d,right:%d\n",center,MOTOR_A.out,MOTOR_B.out);
-            set_motor_output(&MOTOR_A,&MOTOR_B);
+            set_motor_output(MOTOR_A.out,MOTOR_B.out);
 						
         }
 #endif
+    }
+}
+
+
+
+/**
+ * step1: 计算阈值
+ * step1: 128像素划分为7个块，通过投票，获取7个块的值(0/1)
+ * step2: 模糊控制，电机转速
+*/
+static void split_ccd_data(uint8_t* result)
+{
+    uint8_t zones[ZONE_NUMS];
+
+    uint8_t data_size = 128 - 2 * PIXELS_TO_REMOVE;
+    uint8_t zone_size = data_size/ZONE_NUMS;// 16
+    uint8_t add_def = data_size%ZONE_NUMS;
+
+    uint8_t threshold = otsu_threshold();
+
+    uint8_t start_idx = PIXELS_TO_REMOVE,end_idx;
+
+    uint8_t*  ccd_data = get_data_handle();
+
+    *result = 0;
+
+    for(int i = 0;i < ZONE_NUMS;i++)
+    {
+        uint8_t black_cnt = 0,white_cnt = 0;
+        end_idx = start_idx + zone_size + (i < add_def?1:0);
+        for(int j = start_idx;j < end_idx;j++)
+        {
+            if(ccd_data[j] < threshold)
+            {
+                black_cnt++;
+            }else
+            {
+                white_cnt++;
+            }
+        }
+        if(black_cnt > white_cnt)
+        {
+            *result |= (1 << (ZONE_NUMS - i - 1));// 黑色标记
+        }
+        start_idx = end_idx;
+    }
+
+}
+void car_fuzzy_ctrl()
+{
+    int speed_gain;
+
+    split_ccd_data(&sensor_data);
+    switch (sensor_data)
+    {
+    case 0b0000001:
+        // 改变speed_gain
+        break;
+    case 0b0000011:// TODO:需要测试，不知道黑线能占几个像素
+        break;
+    case 0b0000111:
+        break;
+    
+    // 停止线
+    case 0b1111111:
+
+        break;
+    default:
+        break;
+    }
+
+    set_motor_output(car_speed+speed_gain*20,car_speed-speed_gain*20);
+
+    // do other
+    switch (car_status)
+    {
+    case RUN:
+        car_speed = 5000;// 设置一个基本值
+        break;
+    case STOP:
+
+        break;
+    default:
+        break;
     }
 }

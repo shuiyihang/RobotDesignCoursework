@@ -23,7 +23,11 @@ int read_encoder(uint8_t TIMX);
 float get_battery_vol();
 void commission_with_pc();
 
+uint8_t* get_data_handle();
 
+uint8_t auto_threshold_1(void);
+uint8_t otsu_threshold();
+uint8_t auto_threshold_3();
 //#define TSET_MODE
 
 #endif
