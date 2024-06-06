@@ -161,7 +161,7 @@ static void split_ccd_data(uint8_t* result)
     uint8_t zone_size = data_size/ZONE_NUMS;// 16
     uint8_t add_def = data_size%ZONE_NUMS;
 
-    uint8_t threshold = otsu_threshold();
+    uint8_t threshold = auto_threshold_1();
 
     uint8_t start_idx = PIXELS_TO_REMOVE,end_idx;
 
@@ -195,17 +195,37 @@ void car_fuzzy_ctrl()
 {
     int speed_gain;
 
+    // printf("111===========\n");
+    read_ccd_data();
     split_ccd_data(&sensor_data);
+    printf("sensor_data:%#x\n",sensor_data);
     switch (sensor_data)
     {
     case 0b0000001:
-        // 改变speed_gain
+        //需要右转，左轮加速
+        speed_gain = 50;
         break;
-    case 0b0000011:// TODO:需要测试，不知道黑线能占几个像素
+    case 0b0000010:// TODO:需要测试，不知道黑线能占几个像素
+        speed_gain = 40;
         break;
-    case 0b0000111:
+    case 0b0000100:
+        speed_gain = 20;
         break;
-    
+    // 正中间
+    case 0b1000:
+        speed_gain = 0;
+        break;
+    case 0b10000:
+        speed_gain = -20;
+        break;
+
+    case 0b100000:
+        speed_gain = -40;
+        break;
+
+    case 0b1000000:
+        speed_gain = -50;
+        break;
     // 停止线
     case 0b1111111:
 
@@ -214,13 +234,19 @@ void car_fuzzy_ctrl()
         break;
     }
 
-    set_motor_output(car_speed+speed_gain*20,car_speed-speed_gain*20);
+    int left_out = car_speed+speed_gain*20;
+    if(left_out > MAX_PWM_OUT)left_out = MAX_PWM_OUT;
+
+    int right_out = car_speed-speed_gain*20;
+    if(right_out > MAX_PWM_OUT)right_out = MAX_PWM_OUT;
+
+    set_motor_output(left_out,right_out);
 
     // do other
     switch (car_status)
     {
     case RUN:
-        car_speed = 5000;// 设置一个基本值
+        car_speed = 1000;// 设置一个基本值
         break;
     case STOP:
 

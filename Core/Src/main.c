@@ -175,9 +175,10 @@ int main(void)
 //		float voltage = get_battery_vol();
 //		printf("battery vol:%.2f\n",voltage);
 //		printf("tar_speed: %d, %d, %d\n",test_tar_speed,ec_left,ec_right);
-    commission_with_pc();
+    // commission_with_pc();
+    
     car_fuzzy_ctrl();
-    HAL_Delay(1);// 1ms
+    HAL_Delay(10);// 1ms
   }
   /* USER CODE END 3 */
 }

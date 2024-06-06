@@ -101,70 +101,125 @@ uint8_t auto_threshold_1(void)
 }
 
 // 大津法   otsu
-uint8_t otsu_threshold()
-{
-    #define GrayScale 256
-    int Pixel_Max=0;
-    int Pixel_Min=255;
+// uint8_t otsu_threshold()
+// {
+//     #define GrayScale 256
+//     int Pixel_Max=0;
+//     int Pixel_Min=255;
 
-    uint8_t pixelCount[GrayScale];  //各像素GrayScale的个数pixelCount 一维数组
-    float pixelPro[GrayScale];  //各像素GrayScale所占百分比pixelPro 一维数组
-    int i, j, pixelSum = 128;
+//     uint8_t pixelCount[GrayScale];  //各像素GrayScale的个数pixelCount 一维数组
+//     float pixelPro[GrayScale];  //各像素GrayScale所占百分比pixelPro 一维数组
+//     int i, j, pixelSum = 128;
+//     uint8_t threshold = 0;
+
+
+//     uint8_t* data = ccd_data;  //指向像素数据的指针
+ 
+//     //清零
+//     for (i = 0; i < GrayScale; i++)
+//     {
+//         pixelCount[i] = 0;
+//         pixelPro[i] = 0;
+//     }
+//     printf("333===========\n");
+//     uint32_t gray_sum=0;  //每次执行到这会将gray_sum清零
+//     //统计灰度级中每个像素在整幅图像中的个数
+//     for (i = 0; i < 128; i+=1)
+//     {
+//         pixelCount[data[i]]++;  //将当前的点的像素值作为计数数组的下标
+//         gray_sum += data[i];       //灰度值总和
+//         if(data[i] > Pixel_Max) Pixel_Max = data[i];
+//         if(data[i] < Pixel_Min) Pixel_Min = data[i];
+//     }
+ 
+//     //计算每个像素值的点在整幅图像中的比例
+//     for (i = Pixel_Min; i < Pixel_Max; i++)
+//     {
+//         pixelPro[i] = (float)pixelCount[i] / pixelSum;
+//     }
+//     printf("444===========\n");
+//     //遍历灰度级[0,255]
+//     float w0, w1, u0tmp, u1tmp, u0, u1, u, deltaTmp, deltaMax = 0;
+ 
+//     w0 = w1 = u0tmp = u1tmp = u0 = u1 = u = deltaTmp = 0;
+//     for (j = Pixel_Min; j < Pixel_Max; j++)
+//     {
+//         w0 += pixelPro[j];  //背景部分每个灰度值的像素点所占比例之和   即背景部分的比例
+//         u0tmp += j * pixelPro[j];  //背景部分 每个灰度值的点的比例 *灰度值
+ 
+//         w1 = 1-w0;
+//         u1tmp = gray_sum / pixelSum - u0tmp;
+ 
+//         u0 = u0tmp / w0;              //背景平均灰度
+//         u1 = u1tmp / w1;              //前景平均灰度
+//         u = u0tmp + u1tmp;            //全局平均灰度
+//         deltaTmp = (float)(w0 *w1* (u0 - u1)* (u0 - u1)) ;
+//         if (deltaTmp > deltaMax)
+//         {
+//             deltaMax = deltaTmp;
+//             threshold = j;
+//         }
+//         if (deltaTmp < deltaMax)
+//         {
+//             break;
+//         }
+//         printf("444===%d====j:%d====\n",Pixel_Max,j);
+ 
+//     }
+//     printf("555==========\n");
+//     return threshold;
+// }
+
+
+
+// 计算直方图
+void calculate_histogram(uint8_t *hist) {
+    for (int i = 0; i <= 255; i++) {
+        hist[i] = 0;
+    }
+
+    for (int i = 0; i < 128; i++) {
+        hist[ccd_data[i]]++;
+    }
+}
+
+uint8_t otsu_threshold() {
+    uint8_t hist[256];
+    calculate_histogram(hist);
+
+    uint8_t total = 128;
+    float sum = 0;
+    for (int t = 0; t <= 255; t++) {
+        sum += t * hist[t];
+    }
+
+    float sum_background = 0;
+    uint8_t weight_background = 0;
+    uint8_t weight_foreground = 0;
+
+    float max_variance = 0;
     uint8_t threshold = 0;
 
+    for (int t = 0; t <= 255; t++) {
+        weight_background += hist[t];
+        if (weight_background == 0) continue;
 
-    uint8_t* data = ccd_data;  //指向像素数据的指针
- 
-    //清零
-    for (i = 0; i < GrayScale; i++)
-    {
-        pixelCount[i] = 0;
-        pixelPro[i] = 0;
-    }
- 
-    uint32_t gray_sum=0;  //每次执行到这会将gray_sum清零
-    //统计灰度级中每个像素在整幅图像中的个数
-    for (i = 0; i < 128; i+=1)
-    {
-        pixelCount[data[i]]++;  //将当前的点的像素值作为计数数组的下标
-        gray_sum += data[i];       //灰度值总和
-        if(data[i] > Pixel_Max) Pixel_Max = data[i];
-        if(data[i] < Pixel_Min) Pixel_Min = data[i];
-    }
- 
-    //计算每个像素值的点在整幅图像中的比例
-    for (i = Pixel_Min; i < Pixel_Max; i++)
-    {
-        pixelPro[i] = (float)pixelCount[i] / pixelSum;
-    }
- 
-    //遍历灰度级[0,255]
-    float w0, w1, u0tmp, u1tmp, u0, u1, u, deltaTmp, deltaMax = 0;
- 
-    w0 = w1 = u0tmp = u1tmp = u0 = u1 = u = deltaTmp = 0;
-    for (j = Pixel_Min; j < Pixel_Max; j++)
-    {
-        w0 += pixelPro[j];  //背景部分每个灰度值的像素点所占比例之和   即背景部分的比例
-        u0tmp += j * pixelPro[j];  //背景部分 每个灰度值的点的比例 *灰度值
- 
-        w1 = 1-w0;
-        u1tmp = gray_sum / pixelSum - u0tmp;
- 
-        u0 = u0tmp / w0;              //背景平均灰度
-        u1 = u1tmp / w1;              //前景平均灰度
-        u = u0tmp + u1tmp;            //全局平均灰度
-        deltaTmp = (float)(w0 *w1* (u0 - u1)* (u0 - u1)) ;
-        if (deltaTmp > deltaMax)
-        {
-            deltaMax = deltaTmp;
-            threshold = j;
+        weight_foreground = total - weight_background;
+        if (weight_foreground == 0) break;
+
+        sum_background += t * hist[t];
+
+        float mean_background = sum_background / weight_background;
+        float mean_foreground = (sum - sum_background) / weight_foreground;
+
+        float variance_between = (float)weight_background * weight_foreground * (mean_background - mean_foreground) * (mean_background - mean_foreground);
+
+        if (variance_between > max_variance) {
+            max_variance = variance_between;
+            threshold = t;
         }
-        if (deltaTmp < deltaMax)
-        {
-            break;
-        }
- 
     }
+
     return threshold;
 }
 
@@ -344,6 +399,94 @@ int find_ccd_center_2()
 
 
 
+ char binToHex_low(uint8_t num)
+ {
+    uint8_t low_four;
+	 low_four=num&0x0f;
+	 if(low_four==0)
+		 return('0');
+	 else if(low_four==1)
+		  return('1');
+	 else if(low_four==2)
+		  return('2');
+	 else if(low_four==3)
+		  return('3');
+	 else if(low_four==4)
+		  return('4');
+	 else if(low_four==5)
+		  return('5');
+	 else if(low_four==6)
+		  return('6');
+	 else if(low_four==7)
+		  return('7');
+	 else if(low_four==8)
+		  return('8');
+	 else if(low_four==9)
+		  return('9');
+	 else if(low_four==10)
+		  return('A');
+	 else if(low_four==11)
+		  return('B');
+	 else if(low_four==12)
+		  return('C');
+	 else if(low_four==13)
+		  return('D');
+	 else if(low_four==14)
+		  return('E');
+	 else if(low_four==15)
+		  return('F');
+ }
+ 
+/******************************************************************************
+***
+* FUNCTION NAME: binToHex_low(u8 num) *
+* CREATE DATE : 20170707 *
+* CREATED BY : XJU *
+* FUNCTION : 将二进制高8位转换16进制*
+* MODIFY DATE : NONE *
+* INPUT : u8 *
+* OUTPUT : NONE *
+* RETURN : char *
+*******************************************************************************
+**/ 						 
+ char binToHex_high(uint8_t num)
+ {
+		uint8_t high_four;
+		high_four=(num>>4)&0x0f;
+		if(high_four==0)
+			return('0');
+				else if(high_four==1)
+					return('1');
+					else if(high_four==2)
+							return('2');
+							else if(high_four==3)
+								return('3');
+								else if(high_four==4)
+								return('4');
+									else if(high_four==5)
+									return('5');
+										else if(high_four==6)
+											return('6');
+											else if(high_four==7)
+											return('7');
+												else if(high_four==8)
+												return('8');
+													else if(high_four==9)
+														return('9');
+														else if(high_four==10)
+															return('A');
+															else if(high_four==11)
+																return('B');
+																else if(high_four==12)
+																	return('C');
+																	else if(high_four==13)
+																		return('D');
+																		else if(high_four==14)
+																			return('E');
+																			else if(high_four==15)
+																				return('F');
+ }
+
 void commission_with_pc()
 {
 #ifdef TSET_MODE
@@ -355,7 +498,9 @@ void commission_with_pc()
     printf("LD");
     for(int i = 0;i < 132;i++)
     {
-        printf("%c%c",(to_pc_data[i]>>4)&0x0F + '0',to_pc_data[i]&0x0F + '0');
+        // printf("%c%c",(to_pc_data[i]>>4)&0x0F + '0',to_pc_data[i]&0x0F + '0');
+        printf("%c",binToHex_high(to_pc_data[i])); //以字符形式发送高4位对应的16进制
+				printf("%c",binToHex_low(to_pc_data[i]));  //以字符形式发送低?位对应的16进制
     }
     printf("00");
     printf("#");
