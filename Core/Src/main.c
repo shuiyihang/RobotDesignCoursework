@@ -175,10 +175,14 @@ int main(void)
 //		float voltage = get_battery_vol();
 //		printf("battery vol:%.2f\n",voltage);
 //		printf("tar_speed: %d, %d, %d\n",test_tar_speed,ec_left,ec_right);
-    // commission_with_pc();
+    commission_with_pc();
     
-    car_fuzzy_ctrl();
-    HAL_Delay(10);// 1ms
+    // car_fuzzy_ctrl();
+    HAL_Delay(5);// 1ms
+
+
+    // 线宽16像素
+    // 8-24 32-48 56-72 80-96 104-120
   }
   /* USER CODE END 3 */
 }

@@ -21,7 +21,7 @@ PIDController MOTOR_B = {
 	.out = 0
 };
 
-static uint8_t sensor_data,last_sensor_data;
+static uint8_t sensor_data,last_speed_gain = 0;
 static car_state car_status = RUN;
 
 #define SET_HIGH(pin)  HAL_GPIO_WritePin(GPIOB, pin, GPIO_PIN_SET);
@@ -167,6 +167,7 @@ static void split_ccd_data(uint8_t* result)
 
     uint8_t*  ccd_data = get_data_handle();
 
+    // printf("threshold:%d===========\n",threshold);
     *result = 0;
 
     for(int i = 0;i < ZONE_NUMS;i++)
@@ -193,8 +194,9 @@ static void split_ccd_data(uint8_t* result)
 }
 void car_fuzzy_ctrl()
 {
-    int speed_gain;
+    int speed_gain = 0;
 
+    int is_turn = 0;
     // printf("111===========\n");
     read_ccd_data();
     split_ccd_data(&sensor_data);
@@ -203,36 +205,67 @@ void car_fuzzy_ctrl()
     {
     case 0b0000001:
         //需要右转，左轮加速
-        speed_gain = 50;
+        speed_gain = 60;
         break;
     case 0b0000010:// TODO:需要测试，不知道黑线能占几个像素
+    case 0b0000110:
+    case 0b000011:
+    case 0b0000111:
         speed_gain = 40;
         break;
     case 0b0000100:
-        speed_gain = 20;
+        speed_gain = 30;
+        break;
+    
+    case 0b0011111:
+    case 0b0011110:
+    case 0b0001111:
+    case 0b0001110:
+    case 0b0001100:
+        // 右转弯
+        is_turn = 1;
+        speed_gain = 120;
         break;
     // 正中间
     case 0b1000:
         speed_gain = 0;
         break;
     case 0b10000:
-        speed_gain = -20;
+        speed_gain = -30;
         break;
 
     case 0b100000:
+    case 0b110000:
         speed_gain = -40;
         break;
 
     case 0b1000000:
-        speed_gain = -50;
+    case 0b1100000:
+        speed_gain = -60;
+        break;
+    
+    case 0b01111100:
+    case 0b00111000:
+    case 0b01110000:
+    case 0b01111000:
+    case 0b01001000:// 0x48
+    case 0b01011000:// 0x58
+    case 0b01101000:// 0x68
+    case 0b01010000:
+        // 左转弯
+        is_turn = 1;
+        speed_gain = -120;
         break;
     // 停止线
     case 0b1111111:
-
+        car_status = STOP;
         break;
     default:
+        // speed_gain = last_speed_gain;
         break;
     }
+
+    // last_speed_gain = speed_gain;
 
     int left_out = car_speed+speed_gain*20;
     if(left_out > MAX_PWM_OUT)left_out = MAX_PWM_OUT;
@@ -240,16 +273,19 @@ void car_fuzzy_ctrl()
     int right_out = car_speed-speed_gain*20;
     if(right_out > MAX_PWM_OUT)right_out = MAX_PWM_OUT;
 
-    set_motor_output(left_out,right_out);
-
     // do other
     switch (car_status)
     {
     case RUN:
         car_speed = 1000;// 设置一个基本值
+        set_motor_output(left_out,right_out);
+        // if(is_turn)
+        // {
+        //     HAL_Delay(10);
+        // }
         break;
     case STOP:
-
+        set_motor_output(0,0);
         break;
     default:
         break;
